@@ -5,7 +5,7 @@ Multi-spectral Classification on Red & NIR Image with Maximum-likelihood Classif
 import csv
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import norm
+import math
 
 IMAGE_SIZE = 20
 EPSILON = 1e-6
@@ -35,7 +35,7 @@ class MultiSpectralImage:
         is_class = (self.label == class_id)
         vred = self.red[is_class]
         vnir = self.nir[is_class]
-        return vred, vnir
+        return np.array([vred, vnir])
 
     @staticmethod
     def plot_hist(ndvi):
@@ -53,17 +53,57 @@ class MaximumLikelihoodClassifier:
     Maximum-likelihood Classifier
     """
     def __init__(self, training_samples):
-        self.training_samples = training_samples
+        self.samples_veg = training_samples[0]
+        self.samples_grd = training_samples[1]
+        self.samples_wtr = training_samples[2]
 
-    def fit_samples(self, class_id):
+    def train(self):
         """
-        Get mean and standard deviation using MLE
+        For each class of Gaussian model get means and covariance matrices using MLE
         """
-        # TODO: may be wrong to simply use norm.fit
-        mean_red, std_red = norm.fit(training_samples[class_id - 1][0])
-        mean_nir, std_nir = norm.fit(training_samples[class_id - 1][1])
-        return mean_red, std_red, mean_nir, std_nir
-    # TODO: get the formula, link to class
+        # Class vegetation
+        mean_veg = np.array([np.mean(self.samples_veg, axis=1)]).T
+        cvar_veg = np.cov(self.samples_veg)  # divided by (n-1)
+        para_veg = {"mean": mean_veg, "cvar": cvar_veg}
+
+        # Class bare ground
+        mean_grd = np.array([np.mean(self.samples_grd, axis=1)]).T
+        cvar_grd = np.cov(self.samples_grd)
+        para_grd = {"mean": mean_grd, "cvar": cvar_grd}
+
+        # Class water
+        mean_wtr = np.array([np.mean(self.samples_wtr, axis=1)]).T
+        cvar_wtr = np.cov(self.samples_wtr)
+        para_wtr = {"mean": mean_wtr, "cvar": cvar_wtr}
+
+        return para_veg, para_grd, para_wtr
+
+    def classify(self, para_veg, para_grd, para_wtr, inference_sample):
+        """
+        Classify unlabeled pixel using calculated model parameters
+        :param inference_sample: one pixel of shape (2, 1)
+        """
+        # Compute Mahalanobis distances
+        mahalanobis_veg = np.dot(np.dot((inference_sample - para_veg["mean"]).T, np.linalg.inv(para_veg["cvar"])),
+                                 (inference_sample - para_veg["mean"]))
+        mahalanobis_grd = np.dot(np.dot((inference_sample - para_grd["mean"]).T, np.linalg.inv(para_grd["cvar"])),
+                                 (inference_sample - para_grd["mean"]))
+        mahalanobis_wtr = np.dot(np.dot((inference_sample - para_wtr["mean"]).T, np.linalg.inv(para_wtr["cvar"])),
+                                 (inference_sample - para_wtr["mean"]))
+
+        # Compute determinant of Ck
+        determinant_veg = np.linalg.det(para_veg["cvar"])
+        determinant_grd = np.linalg.det(para_grd["cvar"])
+        determinant_wtr = np.linalg.det(para_wtr["cvar"])
+
+        # Conpute overall likelihood over classes
+        likelihood_veg = math.log(determinant_veg) + mahalanobis_veg
+        likelihood_grd = math.log(determinant_grd) + mahalanobis_grd
+        likelihood_wtr = math.log(determinant_wtr) + mahalanobis_wtr
+
+        likelihoods = (likelihood_veg, likelihood_grd, likelihood_wtr)
+        mlclass = likelihoods.index(min(likelihoods))
+        return mlclass
 
 
 def load_data(csv_path):
@@ -91,7 +131,11 @@ if __name__ == '__main__':
     for class_id in CLASS_IDS:
         training_samples.append(msimage.find_class(class_id))
 
-    # Classify
+    # Train classifier with labeled data
     mlclassifier = MaximumLikelihoodClassifier(training_samples)
     for class_id in CLASS_IDS:
-        mlclassifier.fit_samples(class_id)
+        para_veg, para_grd, para_wtr = mlclassifier.train()
+
+    # Classify unlabeled pixels
+    test_sample = np.array([[200.], [100.]])
+    print(mlclassifier.classify(para_veg, para_grd, para_wtr, test_sample))
