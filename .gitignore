@@ -126,4 +126,5 @@ dmypy.json
 
 # Project specified
 .idea
-
+.DS_STORE
+*.xlsx
