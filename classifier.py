@@ -2,10 +2,10 @@
 Multi-spectral Classification on Red & NIR Image with Maximum-likelihood Classifier
 """
 
-import csv
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+from data_loader import load_data
 
 IMAGE_SIZE = 20
 EPSILON = 1e-6
@@ -78,7 +78,8 @@ class MaximumLikelihoodClassifier:
 
         return para_veg, para_grd, para_wtr
 
-    def classify(self, para_veg, para_grd, para_wtr, inference_sample):
+    @staticmethod
+    def classify(para_veg, para_grd, para_wtr, inference_sample):
         """
         Classify unlabeled pixel using calculated model parameters
         :param inference_sample: one pixel of shape (2, 1)
@@ -106,18 +107,6 @@ class MaximumLikelihoodClassifier:
         return mlclass
 
 
-def load_data(csv_path):
-    """
-    Load data from a csv file
-    """
-    records = []
-    with open(csv_path) as data:
-        reader = csv.reader(data)
-        for record in reader:
-            records.append(record)
-    return np.array(records).astype(np.int)
-
-
 if __name__ == '__main__':
     # Load data
     msimage = MultiSpectralImage(load_data("data/RED.csv"), load_data("data/NIR.csv"), load_data("data/label.csv"))
@@ -133,8 +122,7 @@ if __name__ == '__main__':
 
     # Train classifier with labeled data
     mlclassifier = MaximumLikelihoodClassifier(training_samples)
-    for class_id in CLASS_IDS:
-        para_veg, para_grd, para_wtr = mlclassifier.train()
+    para_veg, para_grd, para_wtr = mlclassifier.train()
 
     # Classify unlabeled pixels
     test_sample = np.array([[200.], [100.]])
