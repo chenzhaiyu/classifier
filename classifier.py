@@ -10,6 +10,7 @@ from data_loader import load_data
 IMAGE_SIZE = 20
 EPSILON = 1e-6
 CLASS_IDS = [0, 1, 2, 3]  # 0 is non-training data; 1 is vegetation; 2 is bare ground; 3 is water
+PLOT_NDVI = False
 
 
 class MultiSpectralImage:
@@ -20,6 +21,7 @@ class MultiSpectralImage:
         self.red = red
         self.nir = nir
         self.label = label
+        self.predicted = np.zeros(label.shape).astype(np.int)
 
     def nvdi(self):
         """
@@ -33,14 +35,24 @@ class MultiSpectralImage:
         class_id: 0 is non-training data, 1 is vegetation, 2 is bare ground, 3 is water
         """
         is_class = (self.label == class_id)
+        indexes = np.where(is_class == True)
         vred = self.red[is_class]
         vnir = self.nir[is_class]
         if class_id == 0:
             # return data for inference
-            return np.array([vred, vnir]).T
+            return np.array([vred, vnir]).T, np.array(indexes).T
         else:
             # return data for training
             return np.array([vred, vnir])
+
+    def update_predicted(self, mlclasses, indexes):
+        """
+        Update the image with predicted classes
+        :param mlclasses: list of scalar, class number
+        :param indexes: coordinates of corresponding pixel
+        """
+        for index, mlclass in zip(indexes, mlclasses):
+            self.predicted[index[0], index[1]] = mlclass
 
     @staticmethod
     def plot_hist(ndvi):
@@ -107,11 +119,12 @@ class MaximumLikelihoodClassifier:
         determinant_grd = np.linalg.det(para_grd["cvar"])
         determinant_wtr = np.linalg.det(para_wtr["cvar"])
 
-        # Conpute overall likelihood over classes
+        # Compute overall likelihood over classes
         likelihood_veg = math.log(determinant_veg) + mahalanobis_veg
         likelihood_grd = math.log(determinant_grd) + mahalanobis_grd
         likelihood_wtr = math.log(determinant_wtr) + mahalanobis_wtr
 
+        # Return predicted class
         likelihoods = (likelihood_veg, likelihood_grd, likelihood_wtr)
         mlclass = likelihoods.index(min(likelihoods)) + 1
         return mlclass
@@ -123,7 +136,8 @@ if __name__ == '__main__':
 
     # Compute NDVI
     ndvi = msimage.nvdi()
-    msimage.plot_hist(ndvi)
+    if PLOT_NDVI:
+        msimage.plot_hist(ndvi)
 
     # Prepare training samples
     training_samples = []
@@ -136,10 +150,16 @@ if __name__ == '__main__':
     para_veg, para_grd, para_wtr = mlclassifier.train()
 
     # Prepare inference samples
-    inference_sampels = msimage.find_class(class_id=0)
+    inference_sampels, indexes = msimage.find_class(class_id=0)
 
     # Inference with trained model
+    mlclasses = []
     for sample in inference_sampels:
         mlclass = mlclassifier.classify(para_veg, para_grd, para_wtr, np.array([sample]).T)
+        mlclasses.append(mlclass)
         print("Predicted class: " + str(mlclass))
+
+    # Update the image with predicted classes
+    msimage.update_predicted(mlclasses, indexes)
+    pass
 
