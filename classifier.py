@@ -9,7 +9,7 @@ from data_loader import load_data
 
 IMAGE_SIZE = 20
 EPSILON = 1e-6
-CLASS_IDS = [1, 2, 3]
+CLASS_IDS = [0, 1, 2, 3]  # 0 is non-training data; 1 is vegetation; 2 is bare ground; 3 is water
 
 
 class MultiSpectralImage:
@@ -35,7 +35,12 @@ class MultiSpectralImage:
         is_class = (self.label == class_id)
         vred = self.red[is_class]
         vnir = self.nir[is_class]
-        return np.array([vred, vnir])
+        if class_id == 0:
+            # return data for inference
+            return np.array([vred, vnir]).T
+        else:
+            # return data for training
+            return np.array([vred, vnir])
 
     @staticmethod
     def plot_hist(ndvi):
@@ -52,7 +57,12 @@ class MaximumLikelihoodClassifier:
     """
     Maximum-likelihood Classifier
     """
-    def __init__(self, training_samples):
+    def __init__(self):
+        self.samples_veg = None
+        self.samples_grd = None
+        self.samples_wtr = None
+
+    def feed_training_samples(self, training_samples):
         self.samples_veg = training_samples[0]
         self.samples_grd = training_samples[1]
         self.samples_wtr = training_samples[2]
@@ -103,7 +113,7 @@ class MaximumLikelihoodClassifier:
         likelihood_wtr = math.log(determinant_wtr) + mahalanobis_wtr
 
         likelihoods = (likelihood_veg, likelihood_grd, likelihood_wtr)
-        mlclass = likelihoods.index(min(likelihoods))
+        mlclass = likelihoods.index(min(likelihoods)) + 1
         return mlclass
 
 
@@ -117,13 +127,19 @@ if __name__ == '__main__':
 
     # Prepare training samples
     training_samples = []
-    for class_id in CLASS_IDS:
+    for class_id in CLASS_IDS[1:]:
         training_samples.append(msimage.find_class(class_id))
 
     # Train classifier with labeled data
-    mlclassifier = MaximumLikelihoodClassifier(training_samples)
+    mlclassifier = MaximumLikelihoodClassifier()
+    mlclassifier.feed_training_samples(training_samples)
     para_veg, para_grd, para_wtr = mlclassifier.train()
 
-    # Classify unlabeled pixels
-    test_sample = np.array([[200.], [100.]])
-    print(mlclassifier.classify(para_veg, para_grd, para_wtr, test_sample))
+    # Prepare inference samples
+    inference_sampels = msimage.find_class(class_id=0)
+
+    # Inference with trained model
+    for sample in inference_sampels:
+        mlclass = mlclassifier.classify(para_veg, para_grd, para_wtr, np.array([sample]).T)
+        print("Predicted class: " + str(mlclass))
+
