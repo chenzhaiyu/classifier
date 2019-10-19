@@ -5,7 +5,7 @@ Multi-spectral Classification on Red & NIR Image with Maximum-likelihood Classif
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-from data_loader import load_data
+from data_loader import DataLoader
 
 IMAGE_SIZE = 20
 EPSILON = 1e-6
@@ -132,7 +132,8 @@ class MaximumLikelihoodClassifier:
 
 if __name__ == '__main__':
     # Load data
-    msimage = MultiSpectralImage(load_data("data/RED.csv"), load_data("data/NIR.csv"), load_data("data/label.csv"))
+    dataloader = DataLoader()
+    msimage = MultiSpectralImage(dataloader.load_data("data/RED.csv"), dataloader.load_data("data/NIR.csv"), dataloader.load_data("data/label.csv"))
 
     # Compute NDVI
     ndvi = msimage.nvdi()
