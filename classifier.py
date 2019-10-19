@@ -129,6 +129,11 @@ class MaximumLikelihoodClassifier:
         mlclass = likelihoods.index(min(likelihoods)) + 1
         return mlclass
 
+    @staticmethod
+    def output_prediction(msimage):
+        print("Predictions: \n" + str(msimage.predicted) + "\n")
+        print("where 0 is the training data, 1 is vegetation, 2 is bare ground and 3 is water.")
+
 
 if __name__ == '__main__':
     # Load data
@@ -158,9 +163,9 @@ if __name__ == '__main__':
     for sample in inference_sampels:
         mlclass = mlclassifier.classify(para_veg, para_grd, para_wtr, np.array([sample]).T)
         mlclasses.append(mlclass)
-        print("Predicted class: " + str(mlclass))
 
     # Update the image with predicted classes
     msimage.update_predicted(mlclasses, indexes)
-    pass
+    mlclassifier.output_prediction(msimage)
+
 
