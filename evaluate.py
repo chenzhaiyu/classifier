@@ -1,5 +1,6 @@
 import csv
 import numpy as np
+from sklearn.metrics import confusion_matrix
 
 
 class DEMPoint:
@@ -21,15 +22,26 @@ class Evaluator:
     def __init__(self, dempoints):
         self.labels = np.array([[dempoint.label for dempoint in dempoints]]).T
         self.predictions = np.array([[dempoint.prediction for dempoint in dempoints]]).T
+        self.confusion_matrix = None
+        self.overall_accuracy = None
+        self.kappa_coefficient = None
 
-    def confmat(self):
-        pass
+    def compute_confusion_matrix(self):
+        self.confusion_matrix = confusion_matrix(self.labels, self.predictions, labels=[1, 2, 3, 4, 5]).T
 
-    def accuracy(self):
-        pass
+    def compute_overall_accuracy(self):
+        self.overall_accuracy = np.trace(self.confusion_matrix) / np.sum(self.confusion_matrix)
 
-    def kappa(self):
-        pass
+    def compute_kappa(self):
+        N = np.sum(self.confusion_matrix)
+        Sm = np.trace(self.confusion_matrix)
+        Sg = np.sum([np.sum(self.confusion_matrix[i, :]) * np.sum(self.confusion_matrix[:, i]) for i in range(len(self.confusion_matrix))])
+        self.kappa_coefficient = (N * Sm - Sg) / (N ** 2 - Sg)
+
+    def output_evaluation(self):
+        print("Confusion Matrix: \n" + str(self.confusion_matrix) + "\n")
+        print("Overall Accuracy: " + str(self.overall_accuracy) + "\n")
+        print("Kappa Coefficient: " + str(self.kappa_coefficient))
 
 
 def load_data(csv_name):
@@ -48,4 +60,7 @@ def load_data(csv_name):
 if __name__ == '__main__':
     dempoints = load_data("data/POINTCLOUD.csv")
     evaluator = Evaluator(dempoints)
-    pass
+    evaluator.compute_confusion_matrix()
+    evaluator.compute_overall_accuracy()
+    evaluator.compute_kappa()
+    evaluator.output_evaluation()
