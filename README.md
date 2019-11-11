@@ -6,8 +6,8 @@ Classification on pixels based on multispectral (NIR and RED here) features with
 
 ## Visualization
 
-![measurements](res\measurements.png)
+![measurements](res/measurements.png)
 
-![feature_space](res\feature_space.png)
+![feature_space](res/feature_space.png)
 
-![classified](res\classified.png)
+![classified](res/classified.png)
