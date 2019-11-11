@@ -14,7 +14,6 @@ Classification on pixels based on multispectral (NIR and RED here) features with
   <img width="512" src="res\feature_space.png">
 </p>
 
-
 <p align="center">
   <img width="512" src="res\classified.png">
 </p>
