@@ -6,8 +6,15 @@ Classification on pixels based on multispectral (NIR and RED here) features with
 
 ## Visualization
 
-![measurements](res\measurements.png)
+<p align="center">
+  <img width="512" src="res\measurements.png">
+</p>
 
-![feature_space](res\feature_space.png)
+<p align="center">
+  <img width="512" src="res\feature_space.png">
+</p>
 
-![classified](res\classified.png)
+
+<p align="center">
+  <img width="512" src="res\classified.png">
+</p>
